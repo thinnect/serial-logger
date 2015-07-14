@@ -16,41 +16,60 @@ def log_timestr(timestamp):
     return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S.%f")[:23]
 
 
-class HdlcParser:
-    def __init__(self, timeout=0.2):
+class LineParser(object):
+
+    def __init__(self, delimiter="\x7e", include_delimiter=True, timeout=0.2):
         self.timestamp = time.time()
+        self.delimiter = delimiter
+        self.include_delimiter = include_delimiter
         self.timeout = timeout
         self.buf = ""
+        self.lines = []
+
+    def clear(self):
+        self.buf = ""
+        self.lines = []
 
     def put(self, data):
         if data:
-            self.timestamp = time.time()
+            timestamp = time.time()
+
+            if self.buf == "":
+                self.timestamp = timestamp
+
             self.buf += data
+            while len(self.buf) > 1:
+                delim = self.buf[1:].find(self.delimiter)
+                if delim == -1:
+                    break
+                else:
+                    t = self.buf[:delim+2]
+                    self.buf = self.buf[delim+2:]
+                    if not self.include_delimiter:
+                        t = t.rstrip(self.delimiter).lstrip(self.delimiter)
+                    self.lines.append((self.timestamp, t.encode("hex").upper()))
+                    self.timestamp = timestamp
 
     def __iter__(self):
         return self
 
     def next(self):
-        if len(self.buf) > 2:
-            delim = self.buf[1:].find("\x7e")
-            if delim == -1:
-                if time.time() - self.timestamp > self.timeout:
-                    t = self.buf
-                    self.buf = ""
-                    return self.timestamp, t.encode("hex").upper(), False
-                else:
-                    raise StopIteration
-            else:
-                t = self.buf[:delim+2]
-                self.buf = self.buf[delim+2:]
-                return self.timestamp, t.encode("hex").upper(), True
+        if len(self.lines) > 0:
+            timestamp, line = self.lines.pop(0)
+            return timestamp, line, True
         else:
-            raise StopIteration
+            if self.buf and time.time() - self.timestamp > self.timeout:
+                t = self.buf
+                if not self.include_delimiter:
+                    t = t.rstrip(self.delimiter).lstrip(self.delimiter)
+                self.buf = ""
+                return self.timestamp, t.encode("hex").upper(), False
 
+        raise StopIteration
 
 class SerialLogger(object):
 
-    def __init__(self, port, baud):
+    def __init__(self, port, baud, parser):
         self.port = port
         self.baud = baud
         self.serial_timeout = 0.01 if sys.platform == "win32" else 0
@@ -59,8 +78,8 @@ class SerialLogger(object):
         print "Using  %s:%u" % (self.port, self.baud)
 
         while True:
-            parser = HdlcParser()
             serialport = None
+            parser.clear()
 
             try:
                 while serialport is None:
@@ -101,5 +120,6 @@ if __name__ == "__main__":
     parser.add_argument("baud", default=115200, type=int)
     args = parser.parse_args()
 
-    logger = SerialLogger(args.port, args.baud)
+    parser = LineParser()
+    logger = SerialLogger(args.port, args.baud, parser)
     logger.run()
