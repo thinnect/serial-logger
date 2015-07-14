@@ -16,6 +16,25 @@ def log_timestr(timestamp):
     return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S.%f")[:23]
 
 
+def nocolor_logger_line(line):
+    return line
+
+
+def color_logger_line(line):
+    line = line.lstrip().rstrip()
+    if line.startswith("E|"):
+        return '\033[91m' + line + '\033[0m'
+    if line.startswith("W|"):
+        return '\033[93m' + line + '\033[0m'
+    if line.startswith("I|"):
+        return '\033[97m' + line + '\033[0m'
+    return line
+
+
+def encode_hex_line(line):
+    return line.encode("hex").upper()
+
+
 class LineParser(object):
 
     def __init__(self, delimiter="\x7e", include_delimiter=True, timeout=0.2):
@@ -47,7 +66,7 @@ class LineParser(object):
                     self.buf = self.buf[delim+2:]
                     if not self.include_delimiter:
                         t = t.rstrip(self.delimiter).lstrip(self.delimiter)
-                    self.lines.append((self.timestamp, t.encode("hex").upper()))
+                    self.lines.append((self.timestamp, t))
                     self.timestamp = timestamp
 
     def __iter__(self):
@@ -63,20 +82,19 @@ class LineParser(object):
                 if not self.include_delimiter:
                     t = t.rstrip(self.delimiter).lstrip(self.delimiter)
                 self.buf = ""
-                return self.timestamp, t.encode("hex").upper(), False
+                return self.timestamp, t, False
 
         raise StopIteration
 
+
 class SerialLogger(object):
 
-    def __init__(self, port, baud, parser):
+    def __init__(self, port, baud, parser, encoder):
         self.port = port
         self.baud = baud
         self.serial_timeout = 0.01 if sys.platform == "win32" else 0
 
     def run(self):
-        print "Using  %s:%u" % (self.port, self.baud)
-
         while True:
             serialport = None
             parser.clear()
@@ -97,7 +115,7 @@ class SerialLogger(object):
                         parser.put(serialport.read(1000))
 
                         for timestamp, line, complete in parser:
-                            print "%s : %s%s" % (log_timestr(timestamp), line, "" if complete else " ...")
+                            print "%s : %s%s" % (log_timestr(timestamp), encoder(line), "" if complete else " ...")
                             sys.stdout.flush()
 
                         time.sleep(0.01)
@@ -116,10 +134,24 @@ class SerialLogger(object):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Serial logger")
-    parser.add_argument("port", default="/dev/ttyUSB0")
-    parser.add_argument("baud", default=115200, type=int)
+    parser.add_argument("port", default="/dev/ttyUSB0", nargs='?')
+    parser.add_argument("baud", default=115200, type=int, nargs='?')
+    parser.add_argument("--hdlc", action="store_true")
+    parser.add_argument("--nocolor", action="store_true")
     args = parser.parse_args()
 
-    parser = LineParser()
-    logger = SerialLogger(args.port, args.baud, parser)
+    if args.hdlc:
+        print "Using  %s:%u HDLC mode" % (args.port, args.baud)
+        parser = LineParser()
+        encoder = encode_hex_line
+    else:
+        if args.nocolor:
+            encoder = nocolor_logger_line
+        else:
+            encoder = color_logger_line
+
+        print "Using  %s:%u TEXT mode(%scolor)" % (args.port, args.baud, "no" if args.nocolor else "")
+        parser = LineParser(delimiter="\n", include_delimiter=False)
+
+    logger = SerialLogger(args.port, args.baud, parser, encoder)
     logger.run()
