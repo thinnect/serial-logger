@@ -1,0 +1,3 @@
+#!/usr/bin/env python
+from mote_serial_logger.tail_serial_log import main
+main()

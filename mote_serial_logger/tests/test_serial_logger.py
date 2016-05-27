@@ -1,8 +1,9 @@
+"""test_serial_logger.py: Some tests for parsers."""
+import time
 import unittest
 
-import time
+from mote_serial_logger.mote_serial_logger import LineParser
 
-from serial_logger import LineParser
 
 class LineParserTest(unittest.TestCase):
 
@@ -35,4 +36,4 @@ class LineParserTest(unittest.TestCase):
         self.assertEqual(complete, False)
 
     def test_newline(self):
-    	pass
+        pass
