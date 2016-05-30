@@ -13,7 +13,7 @@ __author__ = "Raido Pahtma"
 __license__ = "MIT"
 
 
-version = "0.2.0"
+version = "0.2.1"
 
 
 def log_time_str(timestamp):
@@ -133,7 +133,7 @@ class SerialLogger(object):
                         time.sleep(0.01)
 
                 except serial.SerialException as e:
-                    print("Disconnected: %s, will try to open again ...".format(e.message))
+                    print("Disconnected: {}, will try to open again ...".format(e.message))
 
             except KeyboardInterrupt:
                 if sp is not None and sp.isOpen():
