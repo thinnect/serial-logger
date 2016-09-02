@@ -8,12 +8,8 @@ import datetime
 
 import serial
 
-
 __author__ = "Raido Pahtma"
 __license__ = "MIT"
-
-
-version = "0.2.1"
 
 
 def log_time_str(timestamp):
