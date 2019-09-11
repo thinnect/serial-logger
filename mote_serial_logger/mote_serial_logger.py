@@ -105,9 +105,18 @@ class SerialLogger(object):
             try:
                 while sp is None:
                     try:
-                        sp = serial.Serial(self.port, self.baud, bytesize=serial.EIGHTBITS,
-                                           parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,
-                                           timeout=self.serial_timeout, xonxoff=0, rtscts=0)
+                        sp = serial.serial_for_url(self.port,
+                                                   baudrate=self.baud,
+                                                   bytesize=serial.EIGHTBITS,
+                                                   parity=serial.PARITY_NONE,
+                                                   stopbits=serial.STOPBITS_ONE,
+                                                   timeout=self.serial_timeout,
+                                                   xonxoff=False,
+                                                   rtscts=False, dsrdtr=False,
+                                                   exclusive=True,
+                                                   do_not_open=True)
+                        sp.dtr = 0  # Set initial state to 0
+                        sp.open()
                         sp.flushInput()
                     except (serial.SerialException, OSError):
                         sp = None
