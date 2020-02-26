@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """tail_serial_log.py: Tail the serial_logger logfiles with color output """
 
 import sys
 import os
 import time
 
-from .mote_serial_logger import color_logger_line
+from mote_serial_logger import color_logger_line
 
 
 __author__ = "Raido Pahtma"
