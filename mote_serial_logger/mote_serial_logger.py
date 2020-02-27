@@ -18,11 +18,11 @@ def log_time_str(timestamp):
 
 
 def nocolor_logger_line(line):
-    return line.decode()
+    return line.decode("ascii", "replace")
 
 
 def color_logger_line(line):
-    line = line.decode().lstrip().rstrip()
+    line = line.decode("ascii", "replace").lstrip().rstrip()
     if line.startswith("E|"):
         return '\033[91m' + line + '\033[0m'
     if line.startswith("W|"):
@@ -33,7 +33,7 @@ def color_logger_line(line):
 
 
 def encode_hex_line(line):
-    return binascii.hexlify(bytearray(line)).decode().upper()
+    return binascii.hexlify(bytearray(line)).decode("ascii", "replace").upper()
 
 
 class LineParser(object):
@@ -133,7 +133,7 @@ class SerialLogger(object):
                         for timestamp, line, complete in self.parser:
                             print("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
                                                      "" if complete else " ..."))
-                            self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line.decode(),
+                            self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line.decode("ascii", "replace"),
                                                                     "" if complete else " ..."))
                             sys.stdout.flush()
 
