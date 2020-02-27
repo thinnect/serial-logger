@@ -140,7 +140,7 @@ class SerialLogger(object):
                         time.sleep(0.01)
 
                 except serial.SerialException as e:
-                    print("Disconnected: {}, will try to open again ...".format(e.message))
+                    print("Disconnected: {}, will try to open again ...".format(e.msg))
 
             except KeyboardInterrupt:
                 if sp is not None and sp.isOpen():
