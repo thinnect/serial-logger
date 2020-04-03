@@ -105,6 +105,10 @@ class SerialLogger(object):
 
             try:
                 while sp is None:
+                    if sys.platform.startswith('linux'):
+                        if 0 != os.system("setserial {} low_latency".format(self.port)):
+                            print("Failed to configure port for low_latency")
+
                     try:
                         sp = serial.serial_for_url(self.port,
                                                    baudrate=self.baud,
@@ -128,7 +132,7 @@ class SerialLogger(object):
 
                 try:
                     while True:
-                        self.parser.put(sp.read(1000))
+                        self.parser.put(sp.read_until(self.parser.delimiter))
 
                         for timestamp, line, complete in self.parser:
                             print("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
@@ -137,7 +141,7 @@ class SerialLogger(object):
                                                                     "" if complete else " ..."))
                             sys.stdout.flush()
 
-                        time.sleep(0.01)
+                        # time.sleep(0.01)
 
                 except serial.SerialException as e:
                     print("Disconnected: {}, will try to open again ...".format(e))
