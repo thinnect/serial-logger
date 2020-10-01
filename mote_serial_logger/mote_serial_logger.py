@@ -22,7 +22,9 @@ def nocolor_logger_line(line):
 
 
 def color_logger_line(line):
-    line = line.decode("ascii", "replace").lstrip().rstrip()
+    if isinstance(line, bytearray):
+        line = line.decode("ascii", "replace")
+    line = line.lstrip().rstrip()
     if line.startswith("E|"):
         return '\033[91m' + line + '\033[0m'
     if line.startswith("W|"):
