@@ -190,11 +190,14 @@ class FileLog(object):
         self.file.write("#-------------------------------------------------------------------------------\n")
         self.file.flush()
 
-        if os.path.islink(latest):
-            os.unlink(latest)
-
         if hasattr(os, "symlink"):
-            os.symlink(self.path, latest)
+            if os.path.islink(latest):
+                os.unlink(latest)
+
+            try:
+                os.symlink(self.path, latest)
+            except OSError:
+                print("Failed to create symlink {} -> {}". format(latest, self.path))
 
     def write(self, data):
         self.file.write(data)
