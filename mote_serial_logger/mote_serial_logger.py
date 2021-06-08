@@ -126,13 +126,13 @@ class SerialLogger(object):
 
                 try:
                     while True:
-                        self.parser.put(sp.read(1000))
+                        self.parser.put(sp.read(1000).decode('utf-8'))
 
                         for timestamp, line, complete in self.parser:
                             print(("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
                                                      "" if complete else " ...")))
                             self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line,
-                                                                    "" if complete else " ..."))
+                                                                    "" if complete else " ...").encode('utf-8'))
                             sys.stdout.flush()
 
                         time.sleep(0.01)
@@ -173,9 +173,9 @@ class FileLog(object):
 
         self.file = open(self.path, "wb", 0)
         self.file.write("# {} / {}\n".format(time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime(now)),
-                                             time.strftime("%Y-%m-%d %H:%M:%S%Z", time.localtime(now))))
-        self.file.write("# {} : {}\n".format(port, baud))
-        self.file.write("#-------------------------------------------------------------------------------\n")
+                                             time.strftime("%Y-%m-%d %H:%M:%S%Z", time.localtime(now))).encode('utf-8'))
+        self.file.write("# {} : {}\n".format(port, baud).encode('utf-8'))
+        self.file.write("#-------------------------------------------------------------------------------\n".encode('utf-8'))
 
         if os.path.islink(latest):
             os.unlink(latest)
