@@ -34,7 +34,7 @@ def main():
         size = os.stat(args.file)[6]
         file = open(args.file, "r")
     except Exception as e:
-        print("Exception {:s}".format(e))
+        print(("Exception {:s}".format(e)))
         sys.exit(1)
 
     try:

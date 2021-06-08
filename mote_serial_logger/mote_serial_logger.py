@@ -72,7 +72,7 @@ class LineParser(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if len(self.lines) > 0:
             timestamp, line = self.lines.pop(0)
             return timestamp, line, True
@@ -122,15 +122,15 @@ class SerialLogger(object):
                         sp = None
                         time.sleep(0.1)
 
-                print("Opened {}:{}".format(self.port, self.baud))
+                print(("Opened {}:{}".format(self.port, self.baud)))
 
                 try:
                     while True:
                         self.parser.put(sp.read(1000))
 
                         for timestamp, line, complete in self.parser:
-                            print("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
-                                                     "" if complete else " ..."))
+                            print(("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
+                                                     "" if complete else " ...")))
                             self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line,
                                                                     "" if complete else " ..."))
                             sys.stdout.flush()
@@ -138,13 +138,13 @@ class SerialLogger(object):
                         time.sleep(0.01)
 
                 except serial.SerialException as e:
-                    print("Disconnected: {}, will try to open again ...".format(e.message))
+                    print(("Disconnected: {}, will try to open again ...".format(e.message)))
 
             except KeyboardInterrupt:
                 if sp is not None and sp.isOpen():
                     sp.close()
                     print("")
-                    print("Closed {}:{}".format(self.port, self.baud))
+                    print(("Closed {}:{}".format(self.port, self.baud)))
                 break
 
 
@@ -205,7 +205,7 @@ def main():
     args = parser.parse_args()
 
     if args.hdlc:
-        print("Using  {}:{} HDLC mode".format(args.port, args.baud))
+        print(("Using  {}:{} HDLC mode".format(args.port, args.baud)))
         parser = LineParser()
         encoder = encode_hex_line
     else:
@@ -214,7 +214,7 @@ def main():
         else:
             encoder = color_logger_line
 
-        print("Using  {}:{} TEXT mode({}color)".format(args.port, args.baud, "no" if args.nocolor else ""))
+        print(("Using  {}:{} TEXT mode({}color)".format(args.port, args.baud, "no" if args.nocolor else "")))
         parser = LineParser(delimiter="\n", include_delimiter=False)
 
     if args.nolog:
@@ -222,7 +222,7 @@ def main():
     else:
         logfile = FileLog(args.logdir, args.port, args.baud)
 
-    print("Logging to {}".format(logfile))
+    print(("Logging to {}".format(logfile)))
 
     SerialLogger(args.port, args.baud, parser, encoder, logfile).run()
 
