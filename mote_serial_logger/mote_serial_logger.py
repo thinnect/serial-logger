@@ -97,7 +97,7 @@ class SerialLogger(object):
         self.baud = baud
         self.parser = parser
         self.encoder = encoder
-        self.serial_timeout = 0.01 if sys.platform == "win32" else 0
+        self.serial_timeout = 0.01
         self.logfile = logfile
 
     def run(self):
