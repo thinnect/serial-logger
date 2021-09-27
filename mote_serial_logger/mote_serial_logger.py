@@ -1,10 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """serial_logger.py: Serial port logger."""
 
 import os
 import sys
 import time
 import datetime
+import binascii
 
 import serial
 
@@ -17,10 +18,12 @@ def log_time_str(timestamp):
 
 
 def nocolor_logger_line(line):
-    return line
+    return line.decode("ascii", "replace")
 
 
 def color_logger_line(line):
+    if isinstance(line, bytearray):
+        line = line.decode("ascii", "replace")
     line = line.lstrip().rstrip()
     if line.startswith("E|"):
         return '\033[91m' + line + '\033[0m'
@@ -32,28 +35,28 @@ def color_logger_line(line):
 
 
 def encode_hex_line(line):
-    return line.encode("hex").upper()
+    return binascii.hexlify(bytearray(line)).decode("ascii", "replace").upper()
 
 
 class LineParser(object):
 
-    def __init__(self, delimiter="\x7e", include_delimiter=True, timeout=0.2):
+    def __init__(self, delimiter=b'\x7e', include_delimiter=True, timeout=0.2):
         self.timestamp = time.time()
         self.delimiter = delimiter
         self.include_delimiter = include_delimiter
         self.timeout = timeout
-        self.buf = ""
+        self.buf = bytearray()
         self.lines = []
 
     def clear(self):
-        self.buf = ""
+        self.buf =bytearray()
         self.lines = []
 
     def put(self, data):
         if data:
             timestamp = time.time()
 
-            if self.buf == "":
+            if len(self.buf) == 0:
                 self.timestamp = timestamp
 
             self.buf += data
@@ -72,7 +75,7 @@ class LineParser(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if len(self.lines) > 0:
             timestamp, line = self.lines.pop(0)
             return timestamp, line, True
@@ -81,7 +84,7 @@ class LineParser(object):
                 t = self.buf
                 if not self.include_delimiter:
                     t = t.rstrip(self.delimiter).lstrip(self.delimiter)
-                self.buf = ""
+                self.buf = bytearray()
                 return self.timestamp, t, False
 
         raise StopIteration
@@ -94,7 +97,7 @@ class SerialLogger(object):
         self.baud = baud
         self.parser = parser
         self.encoder = encoder
-        self.serial_timeout = 0.01 if sys.platform == "win32" else 0
+        self.serial_timeout = 0.01
         self.logfile = logfile
 
     def run(self):
@@ -104,6 +107,14 @@ class SerialLogger(object):
 
             try:
                 while sp is None:
+                    if sys.platform.startswith('linux'):
+                        if os.path.exists(self.port):
+                            if 0 != os.system("setserial {} low_latency".format(self.port)):
+                                print("Failed to configure port for low_latency")
+                        else:
+                            time.sleep(0.1)
+                            continue
+
                     try:
                         sp = serial.serial_for_url(self.port,
                                                    baudrate=self.baud,
@@ -116,6 +127,7 @@ class SerialLogger(object):
                                                    exclusive=True,
                                                    do_not_open=True)
                         sp.dtr = 0  # Set initial state to 0
+                        sp.rts = 0  # Set initial state to 0
                         sp.open()
                         sp.flushInput()
                     except (serial.SerialException, OSError):
@@ -126,19 +138,19 @@ class SerialLogger(object):
 
                 try:
                     while True:
-                        self.parser.put(sp.read(1000))
+                        self.parser.put(sp.read_until(self.parser.delimiter))
 
                         for timestamp, line, complete in self.parser:
                             print("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
                                                      "" if complete else " ..."))
-                            self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line,
+                            self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line.decode("ascii", "replace"),
                                                                     "" if complete else " ..."))
                             sys.stdout.flush()
 
-                        time.sleep(0.01)
+                        # time.sleep(0.01)
 
                 except serial.SerialException as e:
-                    print("Disconnected: {}, will try to open again ...".format(e.message))
+                    print("Disconnected: {}, will try to open again ...".format(e))
 
             except KeyboardInterrupt:
                 if sp is not None and sp.isOpen():
@@ -171,20 +183,25 @@ class FileLog(object):
         if not os.path.exists(logdir):
             os.makedirs(logdir)
 
-        self.file = open(self.path, "wb", 0)
+        self.file = open(self.path, "w")
         self.file.write("# {} / {}\n".format(time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime(now)),
                                              time.strftime("%Y-%m-%d %H:%M:%S%Z", time.localtime(now))))
         self.file.write("# {} : {}\n".format(port, baud))
         self.file.write("#-------------------------------------------------------------------------------\n")
-
-        if os.path.islink(latest):
-            os.unlink(latest)
+        self.file.flush()
 
         if hasattr(os, "symlink"):
-            os.symlink(self.path, latest)
+            if os.path.islink(latest):
+                os.unlink(latest)
+
+            try:
+                os.symlink(self.path, latest)
+            except OSError:
+                print("Failed to create symlink {} -> {}". format(latest, self.path))
 
     def write(self, data):
         self.file.write(data)
+        self.file.flush()
 
     def close(self):
         self.file.close()
@@ -215,7 +232,7 @@ def main():
             encoder = color_logger_line
 
         print("Using  {}:{} TEXT mode({}color)".format(args.port, args.baud, "no" if args.nocolor else ""))
-        parser = LineParser(delimiter="\n", include_delimiter=False)
+        parser = LineParser(delimiter=b'\n', include_delimiter=False)
 
     if args.nolog:
         logfile = DummyFileLog()

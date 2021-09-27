@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """tail_serial_log.py: Tail the serial_logger logfiles with color output """
 
 import sys
@@ -20,13 +20,16 @@ def tail_file(file, interval=0.1):
             time.sleep(interval)
             file.seek(where)
         else:
-            yield color_logger_line(line)
+            if len(line) > 25:
+                yield line[:25] + color_logger_line(line[25:])
+            else:
+                yield line
 
 
 def main():
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Serial logger")
-    parser.add_argument("file", default="/dev/ttyUSB0", nargs='?')
+    parser = ArgumentParser(description="Tail logger")
+    parser.add_argument("file", default="~/log_ttyUSB0_latest.txt", nargs='?')
     parser.add_argument("--interval", type=float, default=0.1)
     args = parser.parse_args()
 
@@ -41,6 +44,7 @@ def main():
         file.seek(size)
         for line in tail_file(file, interval=args.interval):
             print(line)
+            sys.stdout.flush()
 
     except KeyboardInterrupt:
         print("interrupted")
