@@ -6,6 +6,7 @@ import sys
 import time
 import datetime
 import binascii
+import serial
 
 from mote_binary_logger_component import *
 
@@ -36,6 +37,9 @@ def color_logger_line(line):
 
 def encode_hex_line(line):
     return binascii.hexlify(bytearray(line)).decode("ascii", "replace").upper()
+
+def binary_hex_line(line):
+    return line
 
 class LineParser(object):
 
@@ -142,8 +146,8 @@ class SerialLogger(object):
                         for timestamp, line, complete in self.parser:
                             print("{} : {}{}".format(log_time_str(timestamp), self.encoder(line),
                                                      "" if complete else " ..."))
-                            self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line.decode("ascii", "replace"),
-                                                                    "" if complete else " ..."))
+                            #self.logfile.write("{} : {}{}\n".format(log_time_str(timestamp), line.decode("ascii", "replace"),
+                            #                                        "" if complete else " ..."))
                             sys.stdout.flush()
 
                         # time.sleep(0.01)
@@ -226,8 +230,9 @@ def main():
         parser = LineParser()
         encoder = encode_hex_line
     elif args.binary:
+        print("Using  {}:{} Binary mode".format(args.port, args.baud))
         parser = BinaryParser(args.binary)
-        encoder = encode_hex_line
+        encoder = binary_hex_line
     else:
         if args.nocolor:
             encoder = nocolor_logger_line

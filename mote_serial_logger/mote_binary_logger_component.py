@@ -16,6 +16,7 @@ class DataTypes(Enum):
     UINT64 = 5
     POINTER = 6
     DOUBLE = 7
+    STRING = 8
 
 class BinaryParser(object):
     def __init__(self, file, delimiter=b'\x7e', include_delimiter=False, timeout=0.2):
@@ -47,7 +48,7 @@ class BinaryParser(object):
             if found_percentage is not True and string[element] == '%':
                 start = element
                 found_percentage = True
-            if found_percentage is True and isFormatElement(string[element]) is True:
+            if found_percentage is True and self.isFormatElement(string[element]) is True:
                 formatters.append(string[start+1:element+1])
                 start = 0
                 found_percentage = False
@@ -58,6 +59,7 @@ class BinaryParser(object):
         return '%s%s%s'%(text[:start],replacement,text[end+1:])
 
     def ReplaceFormatters(self, fmt, data):
+        print("Formating :" + fmt)
         found_percentage = False
         res = fmt
         start = 0
@@ -73,15 +75,22 @@ class BinaryParser(object):
                 if found_percentage is not True and res[element] == '%':
                     start = element
                     found_percentage = True
-                if found_percentage is True and isFormatElement(res[element]) is True:
-                    res = replace_str_index(res, start, element, str(data[i]))
+                if found_percentage is True and self.isFormatElement(res[element]) is True:
+                    res = self.replace_str_index(res, start, element, str(data[i]))
                     i += 1
                     break
-
+        
+        # All data is not formated which means there is a buffer included
+        if i != len(data):
+            string = ""
+            string.append(res)
+            string.append(data[len(data)])
+            res = string
+        
         return res
 
 
-    def GetArguments(self, formats,data):
+    def GetArguments(self, formats, data):
         #Convert formats to datatypes
         args = []
         types = []
@@ -107,6 +116,8 @@ class BinaryParser(object):
                     types.append(DataTypes.POINTER)
                 elif d[-1] == 'f':
                     types.append(DataTypes.DOUBLE)
+                elif d[-1] == 's':
+                    types.append(DataTypes.STRING)
     
         for type in types:
             if type == DataTypes.INT64:
@@ -139,7 +150,20 @@ class BinaryParser(object):
             elif type == DataTypes.DOUBLE:
                 args.append(data[pos:pos+4])
                 pos += 4
-        
+            elif type == DataTypes.STRING:
+                end_pos = pos
+                while True:
+                    if data[end_pos] == 0:
+                        break
+                    end_pos +=1
+                args.append(data[pos:end_pos])
+                pos += (end_pos - pos)
+
+
+        # There is data left probably buffer
+        if len(data) != pos:
+            args.append(data[pos:len(data)])
+
         return args
     
     def get_message(self, line):
@@ -157,14 +181,15 @@ class BinaryParser(object):
                 for log in mod.GetLogs():
                     if log.GetLinenr() == line_nr:
                         fmtstring = log.GetFormat()
-                        formatters = SplitFormatters(fmtstring)
-                        args = GetArguments(formatters,data)
-                        res = ReplaceFormatters(fmtstring,args)
+                        formatters = self.SplitFormatters(fmtstring)
+                        args = self.GetArguments(formatters,data)
+                        res = self.ReplaceFormatters(fmtstring,args)
 
         return res
     
     def put(self, data):
         if data:
+            print("Inside put Data is :" + str(data))
             timestamp = time.time()
 
             if len(self.buf) == 0:
@@ -181,7 +206,7 @@ class BinaryParser(object):
                     if not self.include_delimiter:
                         t = t.rstrip(self.delimiter).lstrip(self.delimiter)
                     
-                    self.lines.append((self.timestamp, get_message(t)))
+                    self.lines.append((self.timestamp, self.get_message(t)))
                     self.timestamp = timestamp
 
     def __iter__(self):
