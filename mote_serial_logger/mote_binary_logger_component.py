@@ -59,7 +59,6 @@ class BinaryParser(object):
         return '%s%s%s'%(text[:start],replacement,text[end+1:])
 
     def ReplaceFormatters(self, fmt, data):
-        print("Formating :" + fmt)
         found_percentage = False
         res = fmt
         start = 0
@@ -82,9 +81,8 @@ class BinaryParser(object):
         
         # All data is not formated which means there is a buffer included
         if i != len(data):
-            string = ""
-            string.append(res)
-            string.append(data[len(data)])
+            print(data)
+            string = res +  " 0x" + data[len(data) - 1].hex()
             res = string
         
         return res
@@ -121,27 +119,27 @@ class BinaryParser(object):
     
         for type in types:
             if type == DataTypes.INT64:
-                value = int.from_bytes(data[pos:pos+8], byteorder='big',signed=True)
+                value = int.from_bytes(data[pos:pos+8], byteorder='little',signed=True)
                 args.append(value)
                 pos += 8
             elif type == DataTypes.UINT64:
-                value = int.from_bytes(data[pos:pos+8], byteorder='big',signed=False)
+                value = int.from_bytes(data[pos:pos+8], byteorder='little',signed=False)
                 args.append(value)
                 pos += 8
             elif type == DataTypes.INT32:
-                value = int.from_bytes(data[pos:pos+4], byteorder='big',signed=True)
+                value = int.from_bytes(data[pos:pos+4], byteorder='little',signed=True)
                 args.append(value)
                 pos += 4
             elif type == DataTypes.UINT32:
-                value = int.from_bytes(data[pos:pos+4], byteorder='big',signed=False)
+                value = int.from_bytes(data[pos:pos+4], byteorder='little',signed=False)
                 args.append(value)
                 pos += 4
             elif type == DataTypes.INT16:
-                value = int.from_bytes(data[pos:pos+2], byteorder='big',signed=True)
+                value = int.from_bytes(data[pos:pos+2], byteorder='little',signed=True)
                 args.append(value)
                 pos += 2
             elif type == DataTypes.UINT16:
-                value = int.from_bytes(data[pos:pos+2], byteorder='big',signed=False)
+                value = int.from_bytes(data[pos:pos+2], byteorder='little',signed=False)
                 args.append(value)
                 pos += 2
             elif type == DataTypes.POINTER:
@@ -176,6 +174,7 @@ class BinaryParser(object):
         args = []
         res = ""
 
+
         for mod in self.modules:
             if mod.GetId() == mod_id:
                 for log in mod.GetLogs():
@@ -184,12 +183,18 @@ class BinaryParser(object):
                         formatters = self.SplitFormatters(fmtstring)
                         args = self.GetArguments(formatters,data)
                         res = self.ReplaceFormatters(fmtstring,args)
+                        severity_ = ["I","W","E","D"]
+                        severity_str = severity_[log.GetSeverity()] + "|" + mod.GetName() + ":" + str(log.GetLinenr()) + "|"
+                        res = severity_str + res
+
+        if res == "":
+            res = "Undefined log"
+            
 
         return res
     
     def put(self, data):
         if data:
-            print("Inside put Data is :" + str(data))
             timestamp = time.time()
 
             if len(self.buf) == 0:
