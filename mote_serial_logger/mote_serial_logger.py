@@ -218,7 +218,7 @@ def main():
     parser.add_argument("--nocolor", action="store_true")
     parser.add_argument("--logdir", default=os.environ.get("SERIAL_LOGGER_LOGDIR", os.path.expanduser("~/log")))
     parser.add_argument("--nolog", action="store_true")
-    parser.add_argument("--binary", action="store_true")
+    parser.add_argument("--binary", default="", nargs='?')
     args = parser.parse_args()
 
     if args.hdlc:
@@ -226,7 +226,7 @@ def main():
         parser = LineParser()
         encoder = encode_hex_line
     elif args.binary:
-        parser = BinaryParser()
+        parser = BinaryParser(args.binary)
         encoder = encode_hex_line
     else:
         if args.nocolor:
