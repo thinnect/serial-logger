@@ -4,6 +4,9 @@ from schema import *
 import time
 import sys
 
+__author__ = "Enari Saar"
+__license__ = "MIT"
+
 
 from enum import Enum
 
