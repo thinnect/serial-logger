@@ -189,13 +189,13 @@ class BinaryParser(object):
                 args.append(value)
                 pos += 4
             elif type == DataTypes.INT16:
-                value = int.from_bytes(data[pos:pos+2], byteorder='little',signed=True)
+                value = int.from_bytes(data[pos:pos+4], byteorder='little',signed=True)
                 args.append(value)
-                pos += 2
+                pos += 4
             elif type == DataTypes.UINT16:
-                value = int.from_bytes(data[pos:pos+2], byteorder='little',signed=False)
+                value = int.from_bytes(data[pos:pos+4], byteorder='little',signed=False)
                 args.append(value)
-                pos += 2
+                pos += 4
             elif type == DataTypes.POINTER:
                 args.append(str(data[pos:pos+4]))
                 pos += 4
@@ -227,6 +227,7 @@ class BinaryParser(object):
         formatters = []
         args = []
         res = ""
+        print("Mod id :" + str(mod_id) + "Line nr:" + str(line_nr))
 
 
         for mod in self.modules:
